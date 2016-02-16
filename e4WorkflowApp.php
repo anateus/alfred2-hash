@@ -92,7 +92,13 @@ class e4WorkflowApp
 	public function run($argv)
 	{
 		array_shift($argv);
-		$query = trim($argv[0]) ?: '';
+		$raw_query = trim($argv[0]) ?: '';
+
+		$parts = explode(' ', $raw_query);
+		$query = $parts[0] . ' ' . $parts[1]; // e.g. sha1 foobar
+		$trunc_len = -1;
+		if (count($parts) > 2)
+			$trunc_len = intval($parts[2], 10);
 
 		$objects = array();
 		$out = array();
@@ -105,10 +111,18 @@ class e4WorkflowApp
 
 
 		// Filter results and running requests
-		if (!count($objects) && $this->appDefaultCommand !== false)
+		if (!count($objects) && $this->appDefaultCommand !== false) {
 			$out = $this->loadCommander($this->appDefaultCommand, $query)->run($query, $argv);
-		elseif (count($objects) == 1 && ($data = $objects[0]->getQueryMatch()) !== false)
+		}
+		elseif (count($objects) == 1 && ($data = $objects[0]->getQueryMatch()) !== false) {
 			$out = $objects[0]->run($data[1], $argv);
+			if ($trunc_len > 0) {
+				$s = substr($out[0]['arg'], 0, $trunc_len);
+				$out[0]['arg'] = $s;
+				$st = explode(' ', $out[0]['title']);
+				$out[0]['title'] = $st[0] . ' ' . $s;
+			}
+		}
 		elseif (count($objects) > 0)
 			foreach($objects AS $object)
 				$out[] = $object->getCommandSuggest();
