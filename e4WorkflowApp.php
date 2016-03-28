@@ -97,8 +97,17 @@ class e4WorkflowApp
 		$parts = explode(' ', $raw_query);
 		$query = $parts[0] . ' ' . $parts[1]; // e.g. sha1 foobar
 		$trunc_len = -1;
-		if (count($parts) > 2)
-			$trunc_len = intval($parts[2], 10);
+		$make_title_case = false;
+		$parts_len = count($parts);
+		if ($parts_len > 2) {
+			for ($i = 2; $i < $parts_len; $i++) {
+				if (is_numeric($parts[$i])) {
+					$trunc_len = intval($parts[$i], 10);
+				} elseif ($parts[$i] === 'title') {
+					$make_title_case = true;
+				}
+			}
+		}
 
 		$objects = array();
 		$out = array();
@@ -116,12 +125,16 @@ class e4WorkflowApp
 		}
 		elseif (count($objects) == 1 && ($data = $objects[0]->getQueryMatch()) !== false) {
 			$out = $objects[0]->run($data[1], $argv);
-			if ($trunc_len > 0) {
-				$s = substr($out[0]['arg'], 0, $trunc_len);
-				$out[0]['arg'] = $s;
-				$st = explode(' ', $out[0]['title']);
-				$out[0]['title'] = $st[0] . ' ' . $s;
+			$s = $out[0]['arg'];
+			if ($make_title_case) {
+				$s = ucwords($s, " \t\r\n\f\v0123456789");
 			}
+			if ($trunc_len > 0) {
+				$s = substr($s, 0, $trunc_len);
+			}
+			$out[0]['arg'] = $s;
+			$st = explode(' ', $out[0]['title']);
+			$out[0]['title'] = $st[0] . ' ' . $s;
 		}
 		elseif (count($objects) > 0)
 			foreach($objects AS $object)
